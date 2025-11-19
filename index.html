@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pirate AI</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            pirate: {
+              900: '#0f172a', // Deep sea blue/black
+              800: '#1e293b',
+              700: '#334155',
+              gold: '#fbbf24',
+              red: '#ef4444',
+              950: '#020617',
+            }
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.5s ease-out',
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0', transform: 'translateY(10px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            }
+          }
+        },
+      },
+    }
+  </script>
+
+  <!-- React & ReactDOM UMD -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- Marked for Markdown parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0f172a;
+      color: #e2e8f0;
+    }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #1e293b; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    
+    /* Prose/Markdown Styles */
+    .prose pre { background: #0f172a; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; border: 1px solid #334155; }
+    .prose code { background: rgba(255,255,255,0.1); padding: 0.2em 0.4em; border-radius: 0.25rem; font-family: monospace; color: #fbbf24; font-size: 0.9em; }
+    .prose pre code { background: transparent; padding: 0; color: #e2e8f0; }
+    .prose p { margin-bottom: 0.75rem; line-height: 1.6; }
+    .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+    .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
+    .prose a { color: #fbbf24; text-decoration: underline; }
+    .prose strong { color: #fff; font-weight: 700; }
+    .prose img { border-radius: 0.5rem; max-width: 100%; margin: 1rem 0; }
+  </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+  }
+}
+</script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- Icons (Inline SVGs to avoid external dependencies) ---
+    const KeyRound = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg>
+    );
+    const ArrowRight = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+    );
+    const User = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    );
+    const Bot = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+    );
+    const Send = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+    );
+    const Menu = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+    );
+    const Plus = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+    );
+    const Trash2 = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+    );
+    const Loader2 = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+    );
+    const Anchor = ({ className }) => (
+       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="5" r="3"/><line x1="12" x2="12" y1="22" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>
+    );
+
+    // --- Components ---
+
+    // Logo with Pirate Ship Concept
+    const Logo = ({ className = "w-12 h-12" }) => (
+      <div className={`flex flex-col items-center justify-center ${className}`}>
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+          {/* The Hull */}
+          <path d="M10 65 Q50 90 90 65 L85 65 L75 80 H25 L15 65 Z" fill="#fbbf24" stroke="#b45309" strokeWidth="2"/>
+          {/* The Sail (A) */}
+          <path d="M50 10 L25 60 H75 Z" fill="#e2e8f0" stroke="#94a3b8" strokeWidth="2"/>
+          {/* The Mast (I) */}
+          <rect x="48" y="10" width="4" height="55" fill="#475569" />
+          {/* Flag */}
+          <path d="M48 10 L65 15 L48 20 Z" fill="#ef4444" />
+          {/* Text on Sail */}
+          <text x="40" y="50" fontSize="20" fontWeight="bold" fill="#1e293b" className="font-mono">A</text>
+          <text x="55" y="50" fontSize="20" fontWeight="bold" fill="#1e293b" className="font-mono">I</text>
+        </svg>
+      </div>
+    );
+
+    const LogoText = () => (
+      <div className="flex flex-col items-center">
+         <Logo className="w-16 h-16 md:w-20 md:h-20" />
+         <h1 className="text-2xl font-bold text-white tracking-wider mt-2">PIRATE AI</h1>
+      </div>
+    );
+
+    // Password / Authentication Screen
+    const AuthScreen = ({ onAuthenticated }) => {
+      const [password, setPassword] = useState('');
+      const [error, setError] = useState(false);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (password === '123') {
+          onAuthenticated();
+        } else {
+          setError(true);
+          setTimeout(() => setError(false), 500);
+        }
+      };
+
+      return (
+        <div className="min-h-screen w-full bg-pirate-900 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+             <div className="absolute top-10 left-10 w-64 h-64 bg-pirate-gold rounded-full filter blur-[100px]"></div>
+             <div className="absolute bottom-10 right-10 w-64 h-64 bg-pirate-red rounded-full filter blur-[100px]"></div>
+          </div>
+
+          <div className="z-10 flex flex-col items-center w-full max-w-md">
+            <div className="mb-8 animate-fade-in">
+              <LogoText />
+            </div>
+
+            <div className={`bg-pirate-800 border border-pirate-700 p-8 rounded-2xl shadow-2xl w-full backdrop-blur-sm transition-transform duration-100 ${error ? 'translate-x-2' : ''}`}>
+              <h2 className="text-xl text-center text-gray-300 mb-6">Welkom aan boord</h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    <KeyRound className="w-5 h-5" />
+                  </div>
+                  <input 
+                    type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Wachtwoord"
+                    className="w-full bg-pirate-900 border border-pirate-700 text-white rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-pirate-gold focus:border-transparent transition-all placeholder-gray-500"
+                    autoFocus
+                  />
+                </div>
+                <button type="submit" className="w-full bg-pirate-gold hover:bg-amber-400 text-pirate-900 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 group">
+                  <span>Enter</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </form>
+              {error && <p className="text-red-400 text-sm text-center mt-4 animate-pulse">Verkeerd wachtwoord, maatje!</p>}
+            </div>
+            <p className="mt-8 text-gray-500 text-sm text-center max-w-xs">Net zo goed als ChatGPT maar zonder limieten.</p>
+          </div>
+        </div>
+      );
+    };
+
+    // Message Bubble Component
+    const MessageBubble = ({ message }) => {
+      const isUser = message.role === 'user';
+      const [htmlContent, setHtmlContent] = useState('');
+
+      useEffect(() => {
+        if (message.type !== 'image') {
+           // Parse markdown using marked
+           setHtmlContent(marked.parse(message.content));
+        }
+      }, [message.content, message.type]);
+
+      return (
+        <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-6`}>
+          <div className={`flex max-w-[90%] md:max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'} gap-3`}>
+            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${isUser ? 'bg-pirate-700' : 'bg-pirate-gold'}`}>
+              {isUser ? <User className="w-5 h-5 text-gray-300" /> : <Bot className="w-5 h-5 text-pirate-900" />}
+            </div>
+            <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+              <div className={`px-4 py-3 rounded-2xl shadow-sm overflow-hidden ${isUser ? 'bg-pirate-700 text-white rounded-tr-sm' : 'bg-pirate-800 text-gray-100 border border-pirate-700 rounded-tl-sm'}`}>
+                {message.type === 'image' ? (
+                   <div className="space-y-2">
+                      <p className="text-sm text-gray-400 mb-2">Hier is je afbeelding:</p>
+                      <img src={message.content} alt="AI Generated" className="rounded-lg max-h-96 w-auto object-contain border border-pirate-600" loading="lazy" />
+                   </div>
+                ) : (
+                  <div className="prose prose-invert max-w-none text-sm md:text-base break-words" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+                )}
+              </div>
+              <span className="text-xs text-gray-500 mt-1 px-1">
+                {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // API Service
+    const WEBHOOK_URL = 'https://ceesodd.app.n8n.cloud/webhook/e14414f0-2dcb-4261-9b72-921060aeca94';
+
+    const sendMessageToWebhook = async (text) => {
+      try {
+        const response = await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, timestamp: new Date().toISOString() }),
+        });
+
+        if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+
+        const contentType = response.headers.get('content-type');
+        let content = '';
+        let type = 'text';
+
+        if (contentType && contentType.includes('application/json')) {
+          const json = await response.json();
+          if (json.output) content = json.output;
+          else if (json.text) content = json.text;
+          else if (json.message) content = json.message;
+          else content = JSON.stringify(json, null, 2);
+
+          if (typeof content === 'string' && content.trim().startsWith('http') && (content.match(/\.(jpeg|jpg|gif|png)$/) != null)) {
+            type = 'image';
+          }
+          if (json.image) {
+            content = json.image;
+            type = 'image';
+          }
+        } else {
+          content = await response.text();
+        }
+
+        return {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: content,
+          type: type,
+          timestamp: Date.now(),
+        };
+      } catch (error) {
+        console.error('Webhook error:', error);
+        return {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: "Arrr! Er ging iets mis met de verbinding naar het schip. Probeer het opnieuw.",
+          type: 'text',
+          timestamp: Date.now(),
+        };
+      }
+    };
+
+    // Main Chat Interface
+    const ChatInterface = () => {
+      const [messages, setMessages] = useState([]);
+      const [input, setInput] = useState('');
+      const [isLoading, setIsLoading] = useState(false);
+      const [sidebarOpen, setSidebarOpen] = useState(false);
+      const messagesEndRef = useRef(null);
+      const textareaRef = useRef(null);
+
+      const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      };
+
+      useEffect(() => { scrollToBottom(); }, [messages]);
+
+      useEffect(() => {
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+        }
+      }, [input]);
+
+      const handleSend = async () => {
+        if (!input.trim() || isLoading) return;
+        const userMessage = { id: crypto.randomUUID(), role: 'user', content: input.trim(), type: 'text', timestamp: Date.now() };
+        setMessages(prev => [...prev, userMessage]);
+        setInput('');
+        setIsLoading(true);
+        if (textareaRef.current) textareaRef.current.style.height = 'auto';
+
+        try {
+          const responseMessage = await sendMessageToWebhook(userMessage.content);
+          setMessages(prev => [...prev, responseMessage]);
+        } catch (error) {
+          console.error("Failed to fetch", error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleSend();
+        }
+      };
+
+      const clearChat = () => {
+        if (window.confirm("Weet je zeker dat je dit gesprek wilt wissen?")) {
+          setMessages([]);
+          setSidebarOpen(false);
+        }
+      };
+
+      return (
+        <div className="flex h-screen bg-pirate-900 text-white overflow-hidden">
+          {/* Sidebar */}
+          <div className={`fixed inset-y-0 left-0 z-40 w-64 bg-pirate-950 bg-opacity-95 border-r border-pirate-800 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+            <div className="flex flex-col h-full p-4">
+              <div className="flex items-center gap-3 mb-8 px-2">
+                <Logo className="w-8 h-8" />
+                <span className="font-bold text-xl tracking-wide">Pirate AI</span>
+              </div>
+              <button onClick={() => { setMessages([]); setSidebarOpen(false); }} className="flex items-center gap-3 px-4 py-3 bg-pirate-800 hover:bg-pirate-700 rounded-lg transition-colors border border-pirate-700 text-sm font-medium mb-4">
+                <Plus className="w-4 h-4" />
+                Nieuwe Chat
+              </button>
+              <div className="flex-1 overflow-y-auto">
+                <div className="px-2">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Geschiedenis</p>
+                  {messages.length > 0 ? (
+                    <div className="text-sm text-gray-400 p-2 rounded hover:bg-pirate-800 cursor-pointer truncate">
+                      {messages[0].content.substring(0, 25)}...
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-600 italic p-2">Nog geen berichten...</p>
+                  )}
+                </div>
+              </div>
+              <div className="mt-auto pt-4 border-t border-pirate-800">
+                 <div className="p-2 bg-pirate-800/50 rounded-lg">
+                    <p className="text-xs text-pirate-gold font-medium text-center">"Net zo goed als chat GPT maar zonder limieten"</p>
+                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile Header */}
+          <div className="fixed top-0 left-0 right-0 h-14 bg-pirate-900 border-b border-pirate-800 flex items-center justify-between px-4 md:hidden z-30">
+             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-gray-300">
+               <Menu className="w-6 h-6" />
+             </button>
+             <span className="font-bold">Pirate AI</span>
+             <button onClick={clearChat} className="text-gray-300">
+                <Trash2 className="w-5 h-5" />
+             </button>
+          </div>
+          {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />}
+
+          {/* Chat Area */}
+          <div className="flex-1 flex flex-col h-full relative pt-14 md:pt-0 w-full max-w-5xl mx-auto">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 scroll-smooth">
+              {messages.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-50 space-y-4">
+                  <Anchor className="w-16 h-16 text-pirate-700" />
+                  <h2 className="text-2xl font-bold text-pirate-600">Start een gesprek</h2>
+                  <p className="text-sm">Stel een vraag, genereer code, of maak een afbeelding.</p>
+                </div>
+              ) : (
+                messages.map(msg => <MessageBubble key={msg.id} message={msg} />)
+              )}
+              {isLoading && (
+                <div className="flex w-full justify-start mb-6 pl-11">
+                   <div className="bg-pirate-800 px-4 py-3 rounded-2xl rounded-tl-sm border border-pirate-700 flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-pirate-gold" />
+                      <span className="text-sm text-gray-400">Aan het denken...</span>
+                   </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+            <div className="p-4 bg-pirate-900 border-t border-pirate-800">
+              <div className="max-w-3xl mx-auto relative">
+                <textarea ref={textareaRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Stuur een bericht naar Pirate AI..." className="w-full bg-pirate-800 text-white placeholder-gray-500 border border-pirate-700 rounded-xl py-3 pl-4 pr-12 focus:outline-none focus:ring-2 focus:ring-pirate-gold/50 focus:border-transparent resize-none max-h-40 min-h-[52px]" rows={1} />
+                <button onClick={handleSend} disabled={!input.trim() || isLoading} className="absolute right-2 bottom-2 p-2 text-gray-400 hover:text-pirate-gold disabled:opacity-50 disabled:hover:text-gray-400 transition-colors">
+                  <Send className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="text-center mt-2">
+                <span className="text-[10px] text-gray-600">Pirate AI kan fouten maken. Controleer belangrijke informatie.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // App Root
+    const App = () => {
+      const [isAuthenticated, setIsAuthenticated] = useState(false);
+      const [isLoading, setIsLoading] = useState(true);
+
+      useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 500);
+        return () => clearTimeout(timer);
+      }, []);
+
+      if (isLoading) {
+        return (
+          <div className="min-h-screen bg-pirate-900 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500"></div>
+          </div>
+        );
+      }
+
+      if (!isAuthenticated) {
+        return <AuthScreen onAuthenticated={() => setIsAuthenticated(true)} />;
+      }
+      return <ChatInterface />;
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
