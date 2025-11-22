@@ -17,6 +17,7 @@
               900: '#0f172a', // Deep sea blue/black
               800: '#1e293b',
               700: '#334155',
+              600: '#475569',
               gold: '#fbbf24',
               red: '#ef4444',
               950: '#020617',
@@ -77,9 +78,9 @@
   "imports": {
     "react": "https://aistudiocdn.com/react@^19.2.0",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
-    "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+    "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0"
   }
 }
 </script>
@@ -89,6 +90,22 @@
 
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
+
+    // --- Utility: Robust ID Generator (Fallbacks for non-secure contexts) ---
+    const generateId = () => {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+      }
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    };
+
+    // --- Constants for Models ---
+    const TEXT_MODELS = ['ChatGPT', 'Grok', 'Expliciet XX'];
+    const IMAGE_MODELS = ['Nano Banana'];
+    const VIDEO_MODELS = ['Kling', 'Veo3'];
 
     // --- Icons (Inline SVGs to avoid external dependencies) ---
     const KeyRound = ({ className }) => (
@@ -121,24 +138,58 @@
     const Anchor = ({ className }) => (
        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="5" r="3"/><line x1="12" x2="12" y1="22" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>
     );
+    const Settings = ({ className }) => (
+       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+    );
+    const ShieldCheck = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+    );
+    const Zap = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    );
+    const AlertTriangle = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+    );
+    const Paperclip = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+    );
+    const X = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    );
+    const ImageIcon = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+    );
+
 
     // --- Components ---
 
-    // Logo with Pirate Ship Concept
+    // Logo with Pirate/AI Cyber-Skull Concept
     const Logo = ({ className = "w-12 h-12" }) => (
       <div className={`flex flex-col items-center justify-center ${className}`}>
         <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-          {/* The Hull */}
-          <path d="M10 65 Q50 90 90 65 L85 65 L75 80 H25 L15 65 Z" fill="#fbbf24" stroke="#b45309" strokeWidth="2"/>
-          {/* The Sail (A) */}
-          <path d="M50 10 L25 60 H75 Z" fill="#e2e8f0" stroke="#94a3b8" strokeWidth="2"/>
-          {/* The Mast (I) */}
-          <rect x="48" y="10" width="4" height="55" fill="#475569" />
-          {/* Flag */}
-          <path d="M48 10 L65 15 L48 20 Z" fill="#ef4444" />
-          {/* Text on Sail */}
-          <text x="40" y="50" fontSize="20" fontWeight="bold" fill="#1e293b" className="font-mono">A</text>
-          <text x="55" y="50" fontSize="20" fontWeight="bold" fill="#1e293b" className="font-mono">I</text>
+          {/* Crossed Bones Background */}
+          <path d="M20 20 L80 80 M80 20 L20 80" stroke="#334155" strokeWidth="8" strokeLinecap="round" />
+          
+          {/* Skull Shape */}
+          <path d="M50 15 C30 15 15 30 15 50 V65 H85 V50 C85 30 70 15 50 15 Z" fill="#1e293b" stroke="#fbbf24" strokeWidth="2"/>
+          <rect x="35" y="65" width="30" height="20" rx="5" fill="#1e293b" stroke="#fbbf24" strokeWidth="2"/>
+          
+          {/* Bandana */}
+          <path d="M14 45 Q50 35 86 45 L86 40 Q50 25 14 40 Z" fill="#ef4444" stroke="#991b1b" strokeWidth="2"/>
+          <circle cx="82" cy="42" r="4" fill="#ef4444" /> 
+          <path d="M84 42 L95 45 L95 55 Z" fill="#ef4444" />
+          
+          {/* Left Eye (Patch) */}
+          <circle cx="35" cy="45" r="8" fill="#0f172a" stroke="#475569" strokeWidth="1"/>
+          <path d="M35 45 L15 35" stroke="#0f172a" strokeWidth="2"/>
+          
+          {/* Right Eye (AI Cyber) */}
+          <circle cx="65" cy="45" r="8" fill="#0f172a" stroke="#fbbf24" strokeWidth="1"/>
+          <circle cx="65" cy="45" r="3" fill="#fbbf24" className="animate-pulse"/>
+          <path d="M65 35 V32 M65 58 V55 M55 45 H52 M78 45 H75" stroke="#fbbf24" strokeWidth="1" opacity="0.5"/>
+          
+          {/* Mouth / Data Lines */}
+          <path d="M40 70 V80 M50 70 V80 M60 70 V80" stroke="#475569" strokeWidth="2" />
         </svg>
       </div>
     );
@@ -213,8 +264,8 @@
 
       useEffect(() => {
         if (message.type !== 'image') {
-           // Parse markdown using marked
-           setHtmlContent(marked.parse(message.content));
+           // Parse markdown using marked (Ensure string input to avoid script errors)
+           setHtmlContent(marked.parse(String(message.content || '')));
         }
       }, [message.content, message.type]);
 
@@ -234,6 +285,14 @@
                 ) : (
                   <div className="prose prose-invert max-w-none text-sm md:text-base break-words" dangerouslySetInnerHTML={{ __html: htmlContent }} />
                 )}
+                {/* Metadata display if available (User sent) */}
+                {message.meta && (
+                    <div className="mt-2 pt-2 border-t border-white/10 text-xs text-gray-400 flex flex-wrap gap-2">
+                        {message.meta.aspectRatio && <span>Formaat: {message.meta.aspectRatio}</span>}
+                        {message.meta.duration && <span>Duur: {message.meta.duration}s</span>}
+                        {message.meta.hasImage && <span className="flex items-center gap-1"><ImageIcon className="w-3 h-3"/> Afbeelding bijgevoegd</span>}
+                    </div>
+                )}
               </div>
               <span className="text-xs text-gray-500 mt-1 px-1">
                 {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -247,12 +306,29 @@
     // API Service
     const WEBHOOK_URL = 'https://ceesodd.app.n8n.cloud/webhook/e14414f0-2dcb-4261-9b72-921060aeca94';
 
-    const sendMessageToWebhook = async (text) => {
+    const sendMessageToWebhook = async (text, options = {}) => {
       try {
+        const { model, aspectRatio, duration, image } = options;
+        
+        // Map friendly names to technical model IDs
+        const modelMapping = {
+            'Nano Banana': 'gemini-2.5-flash-image',
+            'Veo3': 'veo-3.1-generate-preview'
+        };
+
+        const payload = { 
+          message: text, 
+          timestamp: new Date().toISOString(),
+          model: modelMapping[model] || model || 'ChatGPT', // Send mapped ID or fallback
+          aspectRatio: aspectRatio,
+          duration: duration,
+          image: image // Base64 string
+        };
+
         const response = await fetch(WEBHOOK_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text, timestamp: new Date().toISOString() }),
+          body: JSON.stringify(payload),
         });
 
         if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
@@ -280,16 +356,16 @@
         }
 
         return {
-          id: crypto.randomUUID(),
+          id: generateId(),
           role: 'assistant',
-          content: content,
+          content: content || "Geen antwoord ontvangen.",
           type: type,
           timestamp: Date.now(),
         };
       } catch (error) {
         console.error('Webhook error:', error);
         return {
-          id: crypto.randomUUID(),
+          id: generateId(),
           role: 'assistant',
           content: "Arrr! Er ging iets mis met de verbinding naar het schip. Probeer het opnieuw.",
           type: 'text',
@@ -298,14 +374,220 @@
       }
     };
 
+    // Helper to analyze content safety
+    const analyzeContent = (text) => {
+      const lower = (text || '').toLowerCase();
+      const riskKeywords = {
+        violence: ['dood', 'moord', 'wapen', 'vecht', 'kill', 'attack', 'blood', 'bloed', 'bom', 'gun', 'knife', 'shoot'],
+        nsfw: ['naakt', 'sex', 'xxx', 'porn', 'nsfw', 'borsten', 'penis', 'vagina', 'erotic'],
+        political: ['trump', 'biden', 'rutte', 'politiek', 'regering', 'verkiezing', 'vote', 'stem'],
+        hacking: ['hack', 'exploit', 'sql', 'injection', 'ddos', 'malware', 'virus', 'trojan']
+      };
+
+      let foundRisks = [];
+      for (const [category, words] of Object.entries(riskKeywords)) {
+        if (words.some(w => lower.includes(w))) {
+           foundRisks.push(category.toUpperCase());
+        }
+      }
+
+      if (foundRisks.length > 0) {
+        return {
+          status: 'warning',
+          text: `⚠️ **Mogelijke Content Flag**\n\n**Categorie:** ${foundRisks.join(', ')}\n\n**Risico:** Hoog. Deze prompt bevat woorden die vaak worden geblokkeerd door standaard filters (zoals OpenAI/Gemini).\n\n**Advies:** Gebruik 'Expliciet XX' of herformuleer.`
+        };
+      }
+
+      if (lower.length < 15) {
+         return {
+           status: 'neutral',
+           text: `ℹ️ **Te weinig context**\n\nDe input is te kort voor een nauwkeurige risico-analyse.\n\n**Waarschijnlijkheid blokkade:** Laag.`
+         };
+      }
+
+      return {
+        status: 'safe',
+        text: `✅ **Veilig Bevonden**\n\nDeze prompt valt binnen de standaard Content Safety Guidelines van grote aanbieders (OpenAI, Google, Anthropic).\n\nGeen specifieke triggers gedetecteerd voor geweld, haat of adult content.`
+      };
+    };
+
+    // --- Right Sidebar Component ---
+    const RightSidebar = ({ advancedMode, setAdvancedMode, selectedModel, setSelectedModel, evaluation }) => {
+      // Constants defined at top of script: TEXT_MODELS, IMAGE_MODELS, VIDEO_MODELS
+
+      // Evaluation HTML state
+      const [evaluationHtml, setEvaluationHtml] = useState('');
+
+      useEffect(() => {
+        if (evaluation && evaluation.text) {
+            // Ensure valid string for marked
+            setEvaluationHtml(marked.parse(String(evaluation.text)));
+        } else {
+            setEvaluationHtml('');
+        }
+      }, [evaluation]);
+
+      let borderColor = 'border-pirate-700';
+      let bgColor = 'bg-pirate-800';
+      let textColor = 'text-gray-300';
+
+      if (evaluation && evaluation.status === 'safe') {
+        borderColor = 'border-green-600';
+        bgColor = 'bg-green-900/20';
+        textColor = 'text-green-100';
+      } else if (evaluation && evaluation.status === 'warning') {
+        borderColor = 'border-red-600';
+        bgColor = 'bg-red-900/20';
+        textColor = 'text-red-100';
+      } else if (evaluation && evaluation.status === 'neutral') {
+        borderColor = 'border-yellow-600';
+        bgColor = 'bg-yellow-900/20';
+        textColor = 'text-yellow-100';
+      }
+
+      return (
+        <div className="h-full flex flex-col bg-pirate-950 bg-opacity-95 border-l border-pirate-800 p-4 w-72">
+          <h3 className="text-sm font-bold text-pirate-gold uppercase tracking-wider mb-4 flex items-center gap-2">
+            <Zap className="w-4 h-4" />
+            Control Panel
+          </h3>
+
+          {/* Safety Evaluation */}
+          <div className="mb-6">
+             <h4 className="text-xs text-gray-400 mb-2 flex items-center gap-1">
+               <ShieldCheck className="w-3 h-3" />
+               Safety Evaluation
+             </h4>
+             <div className={`${bgColor} border ${borderColor} rounded-lg p-3 min-h-[100px] text-xs ${textColor} transition-colors duration-300`}>
+                {evaluation && evaluation.text ? (
+                   <div className="prose prose-invert prose-sm max-w-none [&>p]:mb-2 [&>ul]:mb-2" dangerouslySetInnerHTML={{ __html: evaluationHtml }} />
+                ) : (
+                  <span className="text-gray-500 italic">Wachten op input voor analyse...</span>
+                )}
+             </div>
+          </div>
+
+          <hr className="border-pirate-800 mb-6" />
+
+          {/* Advanced Mode Toggle */}
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-sm font-medium text-white">Advanced Mode</span>
+            <button 
+              onClick={() => setAdvancedMode(!advancedMode)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-pirate-gold focus:ring-offset-2 focus:ring-offset-pirate-900 ${advancedMode ? 'bg-pirate-gold' : 'bg-pirate-700'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${advancedMode ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+
+          {/* Models Selection */}
+          <div className={`flex-1 overflow-y-auto transition-opacity duration-300 ${advancedMode ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+             
+             {/* Text Models */}
+             <div className="mb-4">
+                <h5 className="text-xs font-semibold text-gray-500 mb-2">TEXT MODELS</h5>
+                <div className="space-y-2">
+                  {TEXT_MODELS.map(model => (
+                    <label key={model} className="flex items-center gap-2 cursor-pointer group">
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedModel === model ? 'border-pirate-gold' : 'border-gray-600 group-hover:border-gray-400'}`}>
+                        {selectedModel === model && <div className="w-2 h-2 rounded-full bg-pirate-gold" />}
+                      </div>
+                      <input 
+                         type="radio" 
+                         name="model" 
+                         value={model} 
+                         checked={selectedModel === model} 
+                         onChange={() => setSelectedModel(model)} 
+                         className="hidden"
+                      />
+                      <span className={`text-sm ${selectedModel === model ? 'text-white' : 'text-gray-400 group-hover:text-gray-300'}`}>{model}</span>
+                    </label>
+                  ))}
+                </div>
+             </div>
+
+             <hr className="border-pirate-800 my-4" />
+
+             {/* Image Models */}
+             <div className="mb-4">
+                <h5 className="text-xs font-semibold text-gray-500 mb-2">IMAGE GENERATORS</h5>
+                <div className="space-y-2">
+                  {IMAGE_MODELS.map(model => (
+                    <label key={model} className="flex items-center gap-2 cursor-pointer group">
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedModel === model ? 'border-pirate-gold' : 'border-gray-600 group-hover:border-gray-400'}`}>
+                         {selectedModel === model && <div className="w-2 h-2 rounded-full bg-pirate-gold" />}
+                      </div>
+                      <input 
+                         type="radio" 
+                         name="model" 
+                         value={model} 
+                         checked={selectedModel === model} 
+                         onChange={() => setSelectedModel(model)} 
+                         className="hidden"
+                      />
+                      <span className={`text-sm ${selectedModel === model ? 'text-white' : 'text-gray-400 group-hover:text-gray-300'}`}>{model}</span>
+                    </label>
+                  ))}
+                </div>
+             </div>
+
+             <hr className="border-pirate-800 my-4" />
+
+             {/* Video Models */}
+             <div>
+                <h5 className="text-xs font-semibold text-gray-500 mb-2">VIDEO GENERATORS</h5>
+                <div className="space-y-2">
+                  {VIDEO_MODELS.map(model => (
+                    <label key={model} className="flex items-center gap-2 cursor-pointer group">
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedModel === model ? 'border-pirate-gold' : 'border-gray-600 group-hover:border-gray-400'}`}>
+                         {selectedModel === model && <div className="w-2 h-2 rounded-full bg-pirate-gold" />}
+                      </div>
+                      <input 
+                         type="radio" 
+                         name="model" 
+                         value={model} 
+                         checked={selectedModel === model} 
+                         onChange={() => setSelectedModel(model)} 
+                         className="hidden"
+                      />
+                      <span className={`text-sm ${selectedModel === model ? 'text-white' : 'text-gray-400 group-hover:text-gray-300'}`}>{model}</span>
+                    </label>
+                  ))}
+                </div>
+             </div>
+
+          </div>
+
+        </div>
+      );
+    };
+
     // Main Chat Interface
     const ChatInterface = () => {
       const [messages, setMessages] = useState([]);
       const [input, setInput] = useState('');
       const [isLoading, setIsLoading] = useState(false);
-      const [sidebarOpen, setSidebarOpen] = useState(false);
+      
+      // Sidebar States
+      const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
+      const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
+
+      // Advanced Mode States
+      const [advancedMode, setAdvancedMode] = useState(false);
+      const [selectedModel, setSelectedModel] = useState('ChatGPT'); 
+      const [evaluation, setEvaluation] = useState(null);
+
+      // Media Generation States
+      const [aspectRatio, setAspectRatio] = useState('1:1');
+      const [duration, setDuration] = useState('5');
+      const [attachedImage, setAttachedImage] = useState(null);
+      const fileInputRef = useRef(null);
+
       const messagesEndRef = useRef(null);
       const textareaRef = useRef(null);
+
+      // Determine if selected model is a media model (Image or Video)
+      const isMediaModel = IMAGE_MODELS.includes(selectedModel) || VIDEO_MODELS.includes(selectedModel);
 
       const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -320,16 +602,68 @@
         }
       }, [input]);
 
+      const handleImageUpload = (e) => {
+          const file = e.target.files[0];
+          if (file) {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                  setAttachedImage(reader.result);
+              };
+              reader.readAsDataURL(file);
+          }
+      };
+
+      const removeImage = () => {
+          setAttachedImage(null);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+      };
+
       const handleSend = async () => {
         if (!input.trim() || isLoading) return;
-        const userMessage = { id: crypto.randomUUID(), role: 'user', content: input.trim(), type: 'text', timestamp: Date.now() };
+        
+        // Reset evaluation state and show loading
+        setEvaluation({ status: 'neutral', text: 'Bezig met analyseren...' });
+        
+        const userMessage = { 
+          id: generateId(), 
+          role: 'user', 
+          content: input.trim(), 
+          type: 'text', 
+          timestamp: Date.now(),
+          // Store meta data locally for display if it's a media model
+          meta: isMediaModel ? { aspectRatio, duration, hasImage: !!attachedImage } : null 
+        };
+
         setMessages(prev => [...prev, userMessage]);
         setInput('');
+        
+        // Clear inputs after sending if media model
+        if (isMediaModel) {
+            setAttachedImage(null); 
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+        
         setIsLoading(true);
         if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
+        // Run local safety analysis
+        const analysisResult = analyzeContent(userMessage.content);
+        
+        // Simulate a brief "processing" delay for the analysis so it feels like AI
+        setTimeout(() => {
+           setEvaluation(analysisResult);
+        }, 800);
+
         try {
-          const responseMessage = await sendMessageToWebhook(userMessage.content);
+          // Prepare options payload
+          const options = {
+              model: selectedModel,
+              aspectRatio: isMediaModel ? aspectRatio : undefined,
+              duration: isMediaModel ? duration : undefined,
+              image: isMediaModel ? attachedImage : undefined
+          };
+
+          const responseMessage = await sendMessageToWebhook(userMessage.content, options);
           setMessages(prev => [...prev, responseMessage]);
         } catch (error) {
           console.error("Failed to fetch", error);
@@ -348,20 +682,21 @@
       const clearChat = () => {
         if (window.confirm("Weet je zeker dat je dit gesprek wilt wissen?")) {
           setMessages([]);
-          setSidebarOpen(false);
+          setLeftSidebarOpen(false);
         }
       };
 
       return (
         <div className="flex h-screen bg-pirate-900 text-white overflow-hidden">
-          {/* Sidebar */}
-          <div className={`fixed inset-y-0 left-0 z-40 w-64 bg-pirate-950 bg-opacity-95 border-r border-pirate-800 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          
+          {/* --- LEFT SIDEBAR (History) --- */}
+          <div className={`fixed inset-y-0 left-0 z-40 w-64 bg-pirate-950 bg-opacity-95 border-r border-pirate-800 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${leftSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
             <div className="flex flex-col h-full p-4">
               <div className="flex items-center gap-3 mb-8 px-2">
                 <Logo className="w-8 h-8" />
                 <span className="font-bold text-xl tracking-wide">Pirate AI</span>
               </div>
-              <button onClick={() => { setMessages([]); setSidebarOpen(false); }} className="flex items-center gap-3 px-4 py-3 bg-pirate-800 hover:bg-pirate-700 rounded-lg transition-colors border border-pirate-700 text-sm font-medium mb-4">
+              <button onClick={() => { setMessages([]); setLeftSidebarOpen(false); }} className="flex items-center gap-3 px-4 py-3 bg-pirate-800 hover:bg-pirate-700 rounded-lg transition-colors border border-pirate-700 text-sm font-medium mb-4">
                 <Plus className="w-4 h-4" />
                 Nieuwe Chat
               </button>
@@ -386,19 +721,29 @@
           </div>
 
           {/* Mobile Header */}
-          <div className="fixed top-0 left-0 right-0 h-14 bg-pirate-900 border-b border-pirate-800 flex items-center justify-between px-4 md:hidden z-30">
-             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-gray-300">
-               <Menu className="w-6 h-6" />
-             </button>
-             <span className="font-bold">Pirate AI</span>
-             <button onClick={clearChat} className="text-gray-300">
-                <Trash2 className="w-5 h-5" />
-             </button>
+          <div className="fixed top-0 left-0 right-0 h-14 bg-pirate-900 border-b border-pirate-800 flex items-center justify-between px-4 lg:hidden z-30">
+             <div className="flex items-center gap-3">
+               <button onClick={() => setLeftSidebarOpen(!leftSidebarOpen)} className="text-gray-300">
+                 <Menu className="w-6 h-6" />
+               </button>
+               <span className="font-bold">Pirate AI</span>
+             </div>
+             <div className="flex items-center gap-3">
+               <button onClick={clearChat} className="text-gray-300">
+                  <Trash2 className="w-5 h-5" />
+               </button>
+               <button onClick={() => setRightSidebarOpen(!rightSidebarOpen)} className="text-gray-300">
+                  <Settings className="w-5 h-5" />
+               </button>
+             </div>
           </div>
-          {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />}
+          
+          {/* Overlays for mobile */}
+          {leftSidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setLeftSidebarOpen(false)} />}
+          {rightSidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setRightSidebarOpen(false)} />}
 
-          {/* Chat Area */}
-          <div className="flex-1 flex flex-col h-full relative pt-14 md:pt-0 w-full max-w-5xl mx-auto">
+          {/* --- CENTER CHAT AREA --- */}
+          <div className="flex-1 flex flex-col h-full relative pt-14 lg:pt-0 w-full min-w-0">
             <div className="flex-1 overflow-y-auto p-4 md:p-6 scroll-smooth">
               {messages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-50 space-y-4">
@@ -419,18 +764,117 @@
               )}
               <div ref={messagesEndRef} />
             </div>
+            
+            {/* Input Area */}
             <div className="p-4 bg-pirate-900 border-t border-pirate-800">
-              <div className="max-w-3xl mx-auto relative">
-                <textarea ref={textareaRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Stuur een bericht naar Pirate AI..." className="w-full bg-pirate-800 text-white placeholder-gray-500 border border-pirate-700 rounded-xl py-3 pl-4 pr-12 focus:outline-none focus:ring-2 focus:ring-pirate-gold/50 focus:border-transparent resize-none max-h-40 min-h-[52px]" rows={1} />
-                <button onClick={handleSend} disabled={!input.trim() || isLoading} className="absolute right-2 bottom-2 p-2 text-gray-400 hover:text-pirate-gold disabled:opacity-50 disabled:hover:text-gray-400 transition-colors">
-                  <Send className="w-5 h-5" />
-                </button>
+              <div className="max-w-3xl mx-auto relative bg-pirate-800 border border-pirate-700 rounded-xl overflow-hidden transition-all duration-300">
+                
+                {/* Media Toolbar (For both Image and Video models) */}
+                {isMediaModel && (
+                  <div className="px-3 py-2 bg-pirate-950/50 border-b border-pirate-700 flex flex-wrap gap-3 items-center">
+                    
+                    {/* Aspect Ratio Selector */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400 uppercase font-semibold">Ratio:</span>
+                        <select 
+                            value={aspectRatio} 
+                            onChange={(e) => setAspectRatio(e.target.value)}
+                            className="bg-pirate-700 text-white text-xs rounded px-2 py-1 border border-pirate-600 focus:outline-none focus:border-pirate-gold cursor-pointer"
+                        >
+                            <option value="1:1">1:1 (Square)</option>
+                            <option value="16:9">16:9 (Landscape)</option>
+                            <option value="9:16">9:16 (Portrait)</option>
+                            <option value="4:3">4:3 (Classic)</option>
+                            <option value="3:4">3:4 (Tall)</option>
+                        </select>
+                    </div>
+
+                    <div className="w-px h-4 bg-pirate-700 mx-1"></div>
+
+                    {/* Duration Selector */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400 uppercase font-semibold">Duration:</span>
+                        <select 
+                            value={duration} 
+                            onChange={(e) => setDuration(e.target.value)}
+                            className="bg-pirate-700 text-white text-xs rounded px-2 py-1 border border-pirate-600 focus:outline-none focus:border-pirate-gold cursor-pointer"
+                        >
+                            <option value="5">5 sec</option>
+                            <option value="10">10 sec</option>
+                        </select>
+                    </div>
+
+                    <div className="w-px h-4 bg-pirate-700 mx-1"></div>
+
+                    {/* Image Upload Trigger */}
+                    <div className="flex items-center">
+                         <input 
+                            type="file" 
+                            accept="image/*" 
+                            ref={fileInputRef} 
+                            onChange={handleImageUpload} 
+                            className="hidden" 
+                            id="image-upload"
+                         />
+                         <label 
+                            htmlFor="image-upload" 
+                            className="flex items-center gap-1 cursor-pointer text-xs text-gray-400 hover:text-white transition-colors py-1 px-2 rounded hover:bg-pirate-700"
+                         >
+                            <Paperclip className="w-3 h-3" />
+                            <span>Input Image (Opt)</span>
+                         </label>
+                    </div>
+
+                  </div>
+                )}
+
+                {/* Preview Area for Uploaded Image */}
+                {attachedImage && (
+                    <div className="px-4 pt-3 pb-1">
+                        <div className="relative inline-block group">
+                            <img src={attachedImage} alt="Upload preview" className="h-16 w-16 object-cover rounded-md border border-pirate-600" />
+                            <button 
+                                onClick={removeImage}
+                                className="absolute -top-2 -right-2 bg-pirate-red text-white rounded-full p-0.5 shadow-md hover:bg-red-600 transition-colors"
+                            >
+                                <X className="w-3 h-3" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                <div className="relative">
+                    <textarea 
+                        ref={textareaRef} 
+                        value={input} 
+                        onChange={(e) => setInput(e.target.value)} 
+                        onKeyDown={handleKeyDown} 
+                        placeholder={isMediaModel ? "Beschrijf je media..." : "Stuur een bericht naar Pirate AI..."} 
+                        className="w-full bg-transparent text-white placeholder-gray-500 py-3 pl-4 pr-12 focus:outline-none resize-none max-h-40 min-h-[52px]" 
+                        rows={1} 
+                    />
+                    <button onClick={handleSend} disabled={!input.trim() || isLoading} className="absolute right-2 bottom-2 p-2 text-gray-400 hover:text-pirate-gold disabled:opacity-50 disabled:hover:text-gray-400 transition-colors">
+                      <Send className="w-5 h-5" />
+                    </button>
+                </div>
               </div>
               <div className="text-center mt-2">
                 <span className="text-[10px] text-gray-600">Pirate AI kan fouten maken. Controleer belangrijke informatie.</span>
               </div>
             </div>
           </div>
+
+          {/* --- RIGHT SIDEBAR (Settings & Evaluation) --- */}
+          <div className={`fixed inset-y-0 right-0 z-40 h-full transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${rightSidebarOpen ? 'translate-x-0' : 'translate-x-full'} shadow-xl lg:shadow-none`}>
+             <RightSidebar 
+               advancedMode={advancedMode} 
+               setAdvancedMode={setAdvancedMode}
+               selectedModel={selectedModel}
+               setSelectedModel={setSelectedModel}
+               evaluation={evaluation}
+             />
+          </div>
+
         </div>
       );
     };
